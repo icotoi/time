@@ -5,10 +5,12 @@
 #include <SPI.h>
 #include <WiFlyHQ.h>
 
-
+#define BUFF_SIZE 100
+#define WAIT_REQ 3 // seconds to wait before next request
 unsigned char screen[5*17];   // 85 LED
-unsigned int TEXT[100];   // Bufer for integer unicode characters we get from internet
+unsigned int TEXT[BUFF_SIZE];   // Bufer for integer unicode characters we get from internet
 char asciiString[] = "Display printing test.";   // unsigned char ASCII text for testing
+int last_time;
 
 // Function definition
 void set_pixel(int x, int y);
@@ -30,8 +32,8 @@ byte server[] = {
 WiFly wifly;
 SoftwareSerial wifiSerial(A0, A1); 
 
-const char mySSID[] = "fotbalrobotic";
-const char myPassword[] = "dorelrobotel";
+const char mySSID[] = "inventeaza.ro";
+const char myPassword[] = "inventeaza";
 
 const char site[] = "hunt.net.nz";
 
@@ -152,15 +154,45 @@ void setup()
   clear_screen();
 
   Serial.println(F("Connected to wireless network!"));
+  
+  last_time = now.second() - WAIT_REQ + 1;
 }
+void parse_html()
+{
+  Serial.println("--Parse HTML--");
+  if (wifly.open(site, 80)) {
+        Serial.print("Connected to ");
+	Serial.println(site);
 
+	/* Send the request */
+	wifly.println("GET /time HTTP/1.0");
+	wifly.println();
+    } else {
+        Serial.println("Failed to connect");
+    }
+    for(int i=0;i<BUFF_SIZE;++i) {
+      if(wifly.available() <= 0) {
+        break;
+      }
+      char ch = wifly.read();
+      Serial.write(ch);
+      TEXT[i] = ch;
+    }
+}
 void loop() 
 { 
   put_time();
   delay(2000);
   // e is UNDEFINED in the lookup table
-  load_ascii_string("T e S T   DE   A F I SARE !");
-  TEXT[7] = 3; // Draw the heart
+  //load_ascii_string("T e S T   DE   A F I SARE !");
+  
+  
+  if(now.second() - last_time > WAIT_REQ) {
+    parse_html();
+    last_time = now.second();
+  }
+
+  //TEXT[7] = 3; // Draw the heart
   scroll_text(500, TEXT);
 }
 
