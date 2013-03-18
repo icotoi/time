@@ -6,7 +6,7 @@
 #include <WiFlyHQ.h>
 
 #define BUFF_SIZE 100
-#define WAIT_REQ 3 // seconds to wait before next request
+#define WAIT_REQ  5000 // seconds to wait before next request
 unsigned char screen[5*17];   // 85 LED
 unsigned int TEXT[BUFF_SIZE];   // Bufer for integer unicode characters we get from internet
 char asciiString[] = "Display printing test.";   // unsigned char ASCII text for testing
@@ -25,17 +25,13 @@ void put_time(void);
 RTC_DS1307 RTC;
 DateTime now;
 
-// Legat de internet
-byte server[] = { 
-  192, 168, 1, 72 };
-
 WiFly wifly;
 SoftwareSerial wifiSerial(A0, A1); 
 
 const char mySSID[] = "inventeaza.ro";
 const char myPassword[] = "inventeaza";
 
-const char site[] = "hunt.net.nz";
+const char site[] = "smartcam.inventeaza.ro";
 
 unsigned int put_string(int posX, unsigned int s[])
 {
@@ -79,13 +75,24 @@ void load_ascii_string(char s[])
 
 void setup() 
 {       
+  /*
+  cli();
+  */
+  init_display_pins();
+  digitalWrite(11, HIGH); // Display off
+  /*
+  init_display_refresh();
+  sei();  
+  clear_screen();
+  */
+  
   char buf[32];  
   // pinMode(2, INPUT);      // This is the main button, tied to INT0
   // digitalWrite(2, HIGH);  // Enable internal pull up on button
-  Serial.begin(9600);
+  Serial.begin(115200);
   wifiSerial.begin(9600);
-  Serial.print("Free memory: ");
-  Serial.println(wifly.getFreeMemory(),DEC);
+  //Serial.print(F("Free memory: "));
+  //Serial.println(wifly.getFreeMemory(),DEC);
 
   //WiFi
   if (!wifly.begin(&wifiSerial, &Serial)) {
@@ -96,41 +103,44 @@ void setup()
   /* Join wifi network if not already associated */
   if (!wifly.isAssociated()) {
     /* Setup the WiFly to connect to a wifi network */
-    Serial.println("Joining network");
+    Serial.println(F("Joining network"));
     wifly.setSSID(mySSID);
     wifly.setPassphrase(myPassword);
     wifly.enableDHCP();
 
     if (wifly.join()) {
-      Serial.println("Joined wifi network");
+      Serial.println(F("Joined wifi network"));
     } 
     else {
-      Serial.println("Failed to join wifi network");
+      Serial.println(F("Failed to join wifi network"));
       terminal();
     }
   } 
   else {
-    Serial.println("Already joined network");
+    Serial.println(F("Already joined network"));
   }
 
-  Serial.print("MAC: ");
+  
+  Serial.print(F("MAC: "));
   Serial.println(wifly.getMAC(buf, sizeof(buf)));
-  Serial.print("IP: ");
+  Serial.print(F("IP: "));
   Serial.println(wifly.getIP(buf, sizeof(buf)));
-  Serial.print("Netmask: ");
+  Serial.print(F("Netmask: "));
   Serial.println(wifly.getNetmask(buf, sizeof(buf)));
-  Serial.print("Gateway: ");
+  Serial.print(F("Gateway: "));
   Serial.println(wifly.getGateway(buf, sizeof(buf)));
 
-  wifly.setDeviceID("Wifly-WebClient");
-  Serial.print("DeviceID: ");
+  wifly.setDeviceID("TI:ME");
+  Serial.print(F("DeviceID: "));
   Serial.println(wifly.getDeviceID(buf, sizeof(buf)));
-
+ 
+  
   if (wifly.isConnected()) {
-    Serial.println("Old connection active. Closing");
+    Serial.println(F("Old connection active. Closing"));
     wifly.close();
   }
 
+  
   // Init RTC
   pinMode(A2, OUTPUT);
   pinMode(A3, OUTPUT);
@@ -145,31 +155,30 @@ void setup()
 
   // Set RTC to date & time this sketch was compiled
   RTC.adjust(DateTime(__DATE__, __TIME__));
-
-  cli();
-  init_display_pins();
-  digitalWrite(11, HIGH); // Display off
-  init_display_refresh();
-  sei();  
-  clear_screen();
-
   Serial.println(F("Connected to wireless network!"));
   
-  last_time = now.second() - WAIT_REQ + 1;
+  last_time = millis();
 }
 void parse_html()
 {
-  Serial.println("--Parse HTML--");
+  Serial.println(F("--Parse HTML--"));
+ 
+  if (wifly.isConnected()) {
+        Serial.println("Old connection active. Closing");
+	wifly.close();
+  }
+ 
   if (wifly.open(site, 80)) {
-        Serial.print("Connected to ");
+        Serial.print(F("Connected to "));
 	Serial.println(site);
 
 	/* Send the request */
-	wifly.println("GET /time HTTP/1.0");
+	wifly.println("GET http://smartcam.inventeaza.ro/time/ HTTP/1.0");
 	wifly.println();
     } else {
-        Serial.println("Failed to connect");
+        Serial.println(F("Failed to connect"));
     }
+    
     for(int i=0;i<BUFF_SIZE;++i) {
       if(wifly.available() <= 0) {
         break;
@@ -181,10 +190,9 @@ void parse_html()
 }
 void loop() 
 { 
-  put_time();
-  delay(2000);
+  /*put_time();
   // e is UNDEFINED in the lookup table
-  //load_ascii_string("T e S T   DE   A F I SARE !");
+  //load_ascii_string("T E S T   D E   A F I S A R E !");
   
   
   if(now.second() - last_time > WAIT_REQ) {
@@ -193,7 +201,27 @@ void loop()
   }
 
   //TEXT[7] = 3; // Draw the heart
-  scroll_text(500, TEXT);
+  scroll_text(500, TEXT);*/
+  if(last_time + WAIT_REQ < millis())  {
+    parse_html();
+    last_time = millis();
+  }
+  
+  // Read HTTP response
+  if (wifly.available() > 0) {
+	char ch = wifly.read();
+	Serial.write(ch);
+	if (ch == '\n') {
+	    /* add a carriage return */ 
+	    Serial.write('\r');
+	}
+    }
+
+    if (Serial.available() > 0) {
+	wifly.write(Serial.read());
+    }
+  
+  
 }
 
 /* Connect the WiFly serial to the serial monitor. */
