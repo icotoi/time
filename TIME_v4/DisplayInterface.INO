@@ -114,7 +114,7 @@ void show_line5(void)
     screen_counter = 0;
 }
 
-ISR (TIMER2_COMPA_vect)
+void timerIsr ()
 {
     DISPLAYOFF; 
     if ( multiplex_wich_counter++ == 6) multiplex_wich_counter = 1;
@@ -169,10 +169,8 @@ void init_display_pins(void)
 
 void init_display_refresh(void)
 {
-    TCCR2A  = (1<<WGM21);
-    TCCR2B |= (1<<CS22)|(1<<CS21); 
-    OCR2A = 100;   // 208.(3)
-    TIMSK2 |= (1<<OCIE2A);
+  Timer1.initialize(3000); // set a timer of length 100000 microseconds (or 0.1 sec - or 10Hz => the led will blink 5 times, 5 cycles of on-and-off, per second)
+  Timer1.attachInterrupt( timerIsr ); // attach the service routine here
 }
 /***************************************************
 *         Hardware interface to display            *
