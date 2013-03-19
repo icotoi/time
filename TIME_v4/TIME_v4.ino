@@ -96,10 +96,7 @@ void setup()
 
   //WiFi
   if (!wifly.begin(&Serial, NULL)) {
-    load_ascii_string("C A N N O T");
-    put_string(0, TEXT);
-    //terminal();
-    
+    LEDDEBUG("CANNOT!"); 
   }
 
   // Join wifi network if not already associated 
@@ -110,16 +107,14 @@ void setup()
     wifly.enableDHCP();
 
     if (wifly.join()) {
-      load_ascii_string("J O I N E D");
-      put_string(0, TEXT);
+      LEDDEBUG("JOINED!"); 
     } 
     else {
-      load_ascii_string("F A I L E D");
-      put_string(0, TEXT);
+      LEDDEBUG("FAILED!"); 
     }
   } 
   else {
-    //Serial.println(F("Already joined network"));
+    LEDDEBUG("ALREADY!"); 
   }
 
   
@@ -140,9 +135,7 @@ void setup()
     //Serial.println(F("Old connection active. Closing"));
     wifly.close();
   }
-  delay(1000);
-  load_ascii_string("T I : M E");
-  put_string(0, TEXT);
+  LEDDEBUG("T I : M E"); 
   
   // Init RTC
   pinMode(A2, OUTPUT);
@@ -162,6 +155,7 @@ void setup()
   last_time = millis();
   load_ascii_string("D I S P L A Y  T E S T !");
 }
+
 void parse_html()
 {
   LEDDEBUG("TRY GET");
@@ -192,16 +186,7 @@ void parse_html()
 void loop() 
 { 
   put_time(5000);
-  // e is UNDEFINED in the lookup table
-  //load_ascii_string("T E S T   D E   A F I S A R E !");
   scroll_text(200, TEXT);
-  
-  //if(now.second() - last_time > WAIT_REQ) {
-  //  parse_html();
-  //  last_time = now.second();
-  //}
-
-  //TEXT[7] = 3; // Draw the heart
   
   if(last_time + WAIT_REQ < millis())  {
     parse_html();
