@@ -6,8 +6,10 @@
 #include <SPI.h>
 #include <WiFlyHQ.h>
 
-#define BUFF_SIZE 100
-#define WAIT_REQ  5000 // seconds to wait before next request
+#define BUFF_SIZE   100
+#define WAIT_REQ    10000 // miliseconds to wait before next request
+#define LEDDEBUG(x) load_ascii_string(x);put_string(0, TEXT);delay(1000);
+
 unsigned char screen[5*17];   // 85 LED
 unsigned int TEXT[BUFF_SIZE];   // Bufer for integer unicode characters we get from internet
 char asciiString[] = "Display printing test.";   // unsigned char ASCII text for testing
@@ -81,7 +83,7 @@ void setup()
   clear_screen();
   
 
-  load_ascii_string("START...");
+  load_ascii_string("T I : M E");
   put_string(0, TEXT);
   
   char buf[32];  
@@ -94,8 +96,8 @@ void setup()
 
   //WiFi
   if (!wifly.begin(&Serial, NULL)) {
-    load_ascii_string("CANNOT");
-    scroll_text(500, TEXT);
+    load_ascii_string("C A N N O T");
+    put_string(0, TEXT);
     //terminal();
     
   }
@@ -108,12 +110,12 @@ void setup()
     wifly.enableDHCP();
 
     if (wifly.join()) {
-      load_ascii_string("JOINED");
-      scroll_text(500, TEXT);
+      load_ascii_string("J O I N E D");
+      put_string(0, TEXT);
     } 
     else {
-      load_ascii_string("FAILED");
-      scroll_text(500, TEXT);
+      load_ascii_string("F A I L E D");
+      put_string(0, TEXT);
     }
   } 
   else {
@@ -138,9 +140,9 @@ void setup()
     //Serial.println(F("Old connection active. Closing"));
     wifly.close();
   }
-  
+  delay(1000);
   load_ascii_string("T I : M E");
-  scroll_text(500, TEXT);
+  put_string(0, TEXT);
   
   // Init RTC
   pinMode(A2, OUTPUT);
@@ -158,41 +160,40 @@ void setup()
   RTC.adjust(DateTime(__DATE__, __TIME__));
   
   last_time = millis();
+  load_ascii_string("D I S P L A Y  T E S T !");
 }
 void parse_html()
 {
-  //Serial.println(F("--Parse HTML--"));
- 
+  LEDDEBUG("TRY GET");
+  
   if (wifly.isConnected()) {
-        //Serial.println("Old connection active. Closing");
+        LEDDEBUG("CLOSE");
 	wifly.close();
   }
  
   if (wifly.open(site, 80)) {
-        //Serial.print(F("Connected to "));
-	//Serial.println(site);
-
 	/* Send the request */
 	wifly.println("GET http://smartcam.inventeaza.ro/time/ HTTP/1.0");
 	wifly.println();
     } else {
-        //Serial.println(F("Failed to connect"));
+        load_ascii_string("FAIL GET");
+        put_string(0, TEXT);
+        delay(1000);
     }
+    delay(1000);
     
     for(int i=0;i<BUFF_SIZE;++i) {
-      if(wifly.available() <= 0) {
-        break;
-      }
+      if(!wifly.available()) {break;}
+      
       char ch = wifly.read();
-      //Serial.write(ch);
       TEXT[i] = ch;
     }
 }
 void loop() 
 { 
-  put_time(2000);
+  put_time(5000);
   // e is UNDEFINED in the lookup table
-  load_ascii_string("T E S T   D E   A F I S A R E !");
+  //load_ascii_string("T E S T   D E   A F I S A R E !");
   scroll_text(200, TEXT);
   
   //if(now.second() - last_time > WAIT_REQ) {
@@ -202,43 +203,39 @@ void loop()
 
   //TEXT[7] = 3; // Draw the heart
   
-  /*
   if(last_time + WAIT_REQ < millis())  {
     parse_html();
     last_time = millis();
   }
   
-  // Read HTTP response
-  if (wifly.available() > 0) {
-	char ch = wifly.read();
-	Serial.write(ch);
-	if (ch == '\n') {
-	    // add a carriage return 
-	    Serial.write('\r');
-	}
-    }
-
-    if (Serial.available() > 0) {
-	wifly.write(Serial.read());
-    }
-  */
-  
-}
-
-/* Connect the WiFly serial to the serial monitor. */
-void terminal()
-{
-  while (1) {
+  // Read HTTP response in the main loop()
+#if 0
+  {
     if (wifly.available() > 0) {
-      Serial.write(wifly.read());
-    }
-
-
-    if (Serial.available() > 0) {
-      wifly.write(Serial.read());
-    }
+        LEDDEBUG("IN");
+	char ch = wifly.read();
+        unsigned char crsr = 0;
+	if(ch == 'p') {
+          while(wifly.available()) {
+            ch = wifly.read();
+            if(ch == '>') {
+              //Start caracter
+              crsr = 0;
+              while(wifly.available()) {
+                ch = wifly.read();
+                while(ch!='<' && crsr < BUFF_SIZE) {
+                  TEXT[crsr] = ch;
+                  crsr++;
+                }
+              }
+            }
+          }
+        }
+     }
   }
+#endif /* 0 */  
 }
+
 
 
 
