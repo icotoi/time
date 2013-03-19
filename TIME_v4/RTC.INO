@@ -1,13 +1,14 @@
 void put_time(unsigned int period)
 {
-  
-    now = RTC.now();
+    clear_screen();
+    
     unsigned long prc = millis();
     while(prc + period > millis()) {
+      now = RTC.now();
       int hour = now.hour();
       int minute = now.minute();
       
-      clear_screen();
+     
       
       if (hour >= 10) {
           put_char(0, '0' + hour/10);   // First digit
